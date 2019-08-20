@@ -15,8 +15,8 @@ RUN mkdir /opt/nodel && wget -O /opt/nodel/nodel.jar $NODEL_JAR
 # Copy recipes
 COPY recipes/script.py /opt/nodel/nodes/raspberrypi/script.py
 
-COPY . /code/
-WORKDIR /code/
+COPY ./script.sh /opt/nodel/script.sh
+WORKDIR /opt/nodel/
 
 # script.sh will run when container starts up on the device
 CMD ["bash","script.sh"]
