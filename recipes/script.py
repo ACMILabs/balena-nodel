@@ -8,15 +8,9 @@ import os
 import urllib2
 
 BALENA_SUPERVISOR_ADDRESS = javaos.getenv('BALENA_SUPERVISOR_ADDRESS')
-print 'Supervisor address: ' + BALENA_SUPERVISOR_ADDRESS
 BALENA_SUPERVISOR_API_KEY = javaos.getenv('BALENA_SUPERVISOR_API_KEY')
 
 def shutdown():
-    """
-    Sends a command to the Balena supervisor to shutdown the device.
-    $ curl -X POST --header "Content-Type:application/json"
-    "$BALENA_SUPERVISOR_ADDRESS/v1/shutdown?apikey=$BALENA_SUPERVISOR_API_KEY"
-    """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/shutdown?apikey=' + BALENA_SUPERVISOR_API_KEY
     print url
     request = urllib2.Request(url)
@@ -24,11 +18,6 @@ def shutdown():
     response = urllib2.urlopen(request)
 
 def reboot():
-    """
-    Sends a command to the Balena supervisor to restart the device.
-    $ curl -X POST --header "Content-Type:application/json"
-    "$BALENA_SUPERVISOR_ADDRESS/v1/reboot?apikey=$BALENA_SUPERVISOR_API_KEY"
-    """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/reboot?apikey=' + BALENA_SUPERVISOR_API_KEY
     print url
     request = urllib2.Request(url)
