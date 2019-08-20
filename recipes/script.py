@@ -1,9 +1,12 @@
-# Copyright (c) 2014Museum Victoria
+# Copyright (c) 2014 Museum Victoria
+# Modifications (c) 2019 ACMI
 # This software is released under the MIT license (see license.txt for details)
 
 """This node provides raspberry pi controls."""
 
 import subprocess
+import os
+
 
 def shutdown():
     returncode = subprocess.call('shutdown -h now', shell=True)
