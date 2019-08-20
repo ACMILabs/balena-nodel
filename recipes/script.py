@@ -3,59 +3,49 @@
 
 """This node provides raspberry pi controls."""
 
-import subprocess
+import os
+import urllib2
+
+BALENA_SUPERVISOR_ADDRESS = os.getenv('BALENA_SUPERVISOR_ADDRESS')
+BALENA_SUPERVISOR_API_KEY = os.getenv('BALENA_SUPERVISOR_API_KEY')
+
 
 def shutdown():
-  returncode = subprocess.call('shutdown -h now', shell=True)
-
+    """
+    Sends a command to the Balena supervisor to shutdown the device.
+    $ curl -X POST --header "Content-Type:application/json"
+    "$BALENA_SUPERVISOR_ADDRESS/v1/shutdown?apikey=$BALENA_SUPERVISOR_API_KEY"
+    """
+    url = BALENA_SUPERVISOR_ADDRESS + '/v1/shutdown?apikey=' + BALENA_SUPERVISOR_API_KEY
+    request = urllib2.Request(url)
+    request.add_header('Content-Type', 'application/json')
+    response = urllib2.urlopen(request)
 
 def reboot():
-  returncode = subprocess.call('reboot now', shell=True)
-
-
-def mute():
-  returncode = subprocess.call('amixer cset numid=2 0', shell=True)
-
-
-def unmute():
-  returncode = subprocess.call('amixer cset numid=2 1', shell=True)
-
-
-def set_volume(vol):
-  returncode = subprocess.call('amixer cset numid=1 ' + str(vol) + '%', shell=True)
+    """
+    Sends a command to the Balena supervisor to restart the device.
+    $ curl -X POST --header "Content-Type:application/json"
+    "$BALENA_SUPERVISOR_ADDRESS/v1/reboot?apikey=$BALENA_SUPERVISOR_API_KEY"
+    """
+    url = BALENA_SUPERVISOR_ADDRESS + '/v1/reboot?apikey=' + BALENA_SUPERVISOR_API_KEY
+    request = urllib2.Request(url)
+    request.add_header('Content-Type', 'application/json')
+    response = urllib2.urlopen(request)
 
 
 # Local actions this Node provides
 def local_action_TurnOff(arg=None):
-  """{"title":"Turn off","desc":"Turns this computer off.","group":"Power"}"""
-  print 'Action TurnOff requested'
-  shutdown()
+    """{"title":"Turn off","desc":"Turns this computer off.","group":"Power"}"""
+    print 'Action TurnOff requested'
+    shutdown()
 
 
 def local_action_Reboot(arg=None):
-  """{"title":"Reboot","desc":"Turns this computer off.","group":"Power","caution":"Ensure hardware is in a state to be rebooted."}"""
-  print 'Action Reboot requested'
-  reboot()
-
-
-def local_action_mute(arg=None):
-  """{"title":"Mute","desc":"Mute this computer.","group":"Volume"}"""
-  print 'Action Mute requested'
-  mute()
-
-
-def local_action_unmute(arg=None):
-  """{"title":"Unmute","desc":"Un-mute this computer.","group":"Volume"}"""
-  print 'Action Unmute requested'
-  unmute()
-
-
-def local_action_SetVolume(arg=None):
-  """{"title":"Set volume","desc":"Set volume.","schema":{"title":"Level","type":"integer","required":"true"},"group":"Volume"}"""
-  print 'Action SetVolume requested - ' + str(arg)
-  set_volume(arg)
+    """{"title":"Reboot","desc":"Turns this computer off.","group":"Power","caution":"Ensure hardware is in a state to be rebooted."}"""
+    print 'Action Reboot requested'
+    reboot()
 
 
 def main(arg=None):
-  # Start your script here.
-  print 'Nodel script started.'
+    # Start your script here.
+    print 'Nodel script started.'
