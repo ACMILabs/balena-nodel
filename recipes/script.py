@@ -1,4 +1,5 @@
-# Copyright (c) 2014Museum Victoria
+# Copyright (c) 2014 Museum Victoria
+# Modifications copyright (c) 2019 ACMI
 # This software is released under the MIT license (see license.txt for details)
 
 """This node provides raspberry pi controls."""
@@ -17,7 +18,7 @@ def shutdown():
     "$BALENA_SUPERVISOR_ADDRESS/v1/shutdown?apikey=$BALENA_SUPERVISOR_API_KEY"
     """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/shutdown?apikey=' + BALENA_SUPERVISOR_API_KEY
-    print(url)
+    print url
     request = urllib2.Request(url)
     request.add_header('Content-Type', 'application/json')
     response = urllib2.urlopen(request)
@@ -29,7 +30,7 @@ def reboot():
     "$BALENA_SUPERVISOR_ADDRESS/v1/reboot?apikey=$BALENA_SUPERVISOR_API_KEY"
     """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/reboot?apikey=' + BALENA_SUPERVISOR_API_KEY
-    print(url)
+    print url
     request = urllib2.Request(url)
     request.add_header('Content-Type', 'application/json')
     response = urllib2.urlopen(request)
