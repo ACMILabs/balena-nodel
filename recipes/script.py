@@ -6,23 +6,23 @@
 import subprocess
 
 def shutdown():
-  returncode = subprocess.call('sudo shutdown -h now', shell=True)
+  returncode = subprocess.call('shutdown -h now', shell=True)
 
 
 def reboot():
-  returncode = subprocess.call('sudo reboot now', shell=True)
+  returncode = subprocess.call('reboot now', shell=True)
 
 
 def mute():
-  returncode = subprocess.call('sudo amixer cset numid=2 0', shell=True)
+  returncode = subprocess.call('amixer cset numid=2 0', shell=True)
 
 
 def unmute():
-  returncode = subprocess.call('sudo amixer cset numid=2 1', shell=True)
+  returncode = subprocess.call('amixer cset numid=2 1', shell=True)
 
 
 def set_volume(vol):
-  returncode = subprocess.call('sudo amixer cset numid=1 ' + str(vol) + '%', shell=True)
+  returncode = subprocess.call('amixer cset numid=1 ' + str(vol) + '%', shell=True)
 
 
 # Local actions this Node provides
@@ -59,4 +59,3 @@ def local_action_SetVolume(arg=None):
 def main(arg=None):
   # Start your script here.
   print 'Nodel script started.'
-  

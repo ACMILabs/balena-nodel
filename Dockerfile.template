@@ -13,7 +13,7 @@ ENV NODEL_JAR https://github.com/museumsvictoria/nodel/releases/download/v2.1.1-
 RUN mkdir /opt/nodel && wget -O /opt/nodel/nodel.jar $NODEL_JAR
 
 # Copy recipes
-COPY recipes/script.py /opt/nodel/nodes/raspberrypi/script.py
+COPY recipes/script.py /opt/nodel/scripts/script.py
 
 COPY ./script.sh /opt/nodel/script.sh
 WORKDIR /opt/nodel/
