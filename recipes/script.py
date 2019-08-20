@@ -4,12 +4,12 @@
 
 """This node provides raspberry pi controls."""
 
-import javaos
+import os
 import urllib2
 
 BALENA_SUPERVISOR_ADDRESS = javaos.getenv('BALENA_SUPERVISOR_ADDRESS')
+print 'Supervisor address: ' + BALENA_SUPERVISOR_ADDRESS
 BALENA_SUPERVISOR_API_KEY = javaos.getenv('BALENA_SUPERVISOR_API_KEY')
-
 
 def shutdown():
     """
