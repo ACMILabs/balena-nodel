@@ -3,11 +3,11 @@
 
 """This node provides raspberry pi controls."""
 
-import os
+import javaos
 import urllib2
 
-BALENA_SUPERVISOR_ADDRESS = os.getenv('BALENA_SUPERVISOR_ADDRESS')
-BALENA_SUPERVISOR_API_KEY = os.getenv('BALENA_SUPERVISOR_API_KEY')
+BALENA_SUPERVISOR_ADDRESS = javaos.getenv('BALENA_SUPERVISOR_ADDRESS')
+BALENA_SUPERVISOR_API_KEY = javaos.getenv('BALENA_SUPERVISOR_API_KEY')
 
 
 def shutdown():
@@ -17,6 +17,7 @@ def shutdown():
     "$BALENA_SUPERVISOR_ADDRESS/v1/shutdown?apikey=$BALENA_SUPERVISOR_API_KEY"
     """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/shutdown?apikey=' + BALENA_SUPERVISOR_API_KEY
+    print(url)
     request = urllib2.Request(url)
     request.add_header('Content-Type', 'application/json')
     response = urllib2.urlopen(request)
@@ -28,6 +29,7 @@ def reboot():
     "$BALENA_SUPERVISOR_ADDRESS/v1/reboot?apikey=$BALENA_SUPERVISOR_API_KEY"
     """
     url = BALENA_SUPERVISOR_ADDRESS + '/v1/reboot?apikey=' + BALENA_SUPERVISOR_API_KEY
+    print(url)
     request = urllib2.Request(url)
     request.add_header('Content-Type', 'application/json')
     response = urllib2.urlopen(request)
