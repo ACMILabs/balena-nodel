@@ -11,8 +11,8 @@ BALENA_SUPERVISOR_ADDRESS = os.getenv('BALENA_SUPERVISOR_ADDRESS')
 
 
 def shutdown():
-    returncode = subprocess.call('shutdown -h now', shell=True)
-
+    # returncode = subprocess.call('shutdown -h now', shell=True)
+    print BALENA_SUPERVISOR_ADDRESS
 
 def reboot():
     returncode = subprocess.call('reboot now', shell=True)
