@@ -4,7 +4,7 @@ FROM balenalib/%%BALENA_ARCH%%-alpine-openjdk:latest-run
 
 # use `install_packages` if you need to install dependencies,
 # for instance if you need git, just uncomment the line below.
-RUN install_packages wget
+RUN install_packages wget jq
 
 # Latest Nodel release
 ENV NODEL_JAR https://github.com/museumsvictoria/nodel/releases/download/v2.1.1-release389/nodelhost-release-2.1.1-rev389.jar
