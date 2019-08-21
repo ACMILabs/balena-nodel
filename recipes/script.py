@@ -7,6 +7,8 @@
 import subprocess
 import os
 
+BALENA_SUPERVISOR_ADDRESS = os.getenv('BALENA_SUPERVISOR_ADDRESS')
+
 
 def shutdown():
     returncode = subprocess.call('shutdown -h now', shell=True)
