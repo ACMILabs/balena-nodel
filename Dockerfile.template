@@ -12,6 +12,11 @@ ENV NODEL_JAR https://github.com/museumsvictoria/nodel/releases/download/v2.1.1-
 # Install Nodel
 RUN mkdir /opt/nodel && wget -O /opt/nodel/nodel.jar $NODEL_JAR
 
+# Copy scripts
+COPY ./scripts/ /code/
+RUN chmod +x /code/shutdown.sh
+RUN chmod +x /code/reboot.sh
+
 # Copy recipes
 COPY recipes/script.py /opt/nodel/scripts/script.py
 
