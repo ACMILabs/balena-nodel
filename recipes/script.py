@@ -6,13 +6,16 @@
 
 import subprocess
 import os
+import urllib2
 
 BALENA_SUPERVISOR_ADDRESS = os.getenv('BALENA_SUPERVISOR_ADDRESS')
+BALENA_SUPERVISOR_API_KEY = os.getenv('BALENA_SUPERVISOR_API_KEY')
 
 
 def shutdown():
     # returncode = subprocess.call('shutdown -h now', shell=True)
     print BALENA_SUPERVISOR_ADDRESS
+    print BALENA_SUPERVISOR_API_KEY
 
 def reboot():
     returncode = subprocess.call('reboot now', shell=True)
