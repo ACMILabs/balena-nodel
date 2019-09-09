@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  balenanodel:
+    build:
+      context: "../"
+      dockerfile: development/Dockerfile
+      args:
+        IS_LOCAL_ENV: "true"
+    hostname: balenanodel
+    container_name: balenanodel
+    env_file: ../dev.env
+    privileged: true
+    volumes:
+      - ../:/code
+    # command: /opt/nodel/script.sh
+    tty: true
+    ports:
+     - 8085:8085
