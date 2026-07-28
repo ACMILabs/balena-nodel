@@ -1,0 +1,13 @@
+services:
+  nodel:
+    build: .
+    restart: always
+    environment:
+      BALENA_DEVICE_NAME_AT_INIT: nodel-development
+    ports:
+      - "8085:8085"
+    volumes:
+      - nodel-data:/var/lib/nodel
+
+volumes:
+  nodel-data:
