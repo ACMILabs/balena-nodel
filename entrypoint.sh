@@ -20,6 +20,21 @@ install -o nodel -g nodel -m 0644 \
 
 export NODEL_MANAGED_NODE_NAME="$node_name"
 
+# Wake-on-LAN controls another computer, so it is opt-in and installed as a
+# separate node. It cannot wake the Balena device hosting this container after
+# that device has powered off.
+if [[ -n "${NODEL_WOL_NODE_NAME:-}" ]]; then
+    wol_node_name="${NODEL_WOL_NODE_NAME//\//_}"
+    if [[ "$wol_node_name" == "$node_name" ]]; then
+        echo "NODEL_WOL_NODE_NAME must differ from the managed node name" >&2
+        exit 1
+    fi
+    wol_node_dir="/var/lib/nodel/nodes/$wol_node_name"
+    install -d -o nodel -g nodel "$wol_node_dir"
+    install -o nodel -g nodel -m 0644 \
+        /opt/nodel/wake-on-lan-node/script.py "$wol_node_dir/script.py"
+fi
+
 nodel_args=("$@")
 if [[ -n "${NODEL_INTERFACE:-}" ]]; then
     nodel_args+=(--interface "$NODEL_INTERFACE")

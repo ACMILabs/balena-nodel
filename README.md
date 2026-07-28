@@ -47,6 +47,29 @@ The power actions require the Supervisor API label. The screenshot action
 requires a compatible Balena browser service with its management port published
 at host port 5011.
 
+### Optional Wake-on-LAN node
+
+Set `NODEL_WOL_NODE_NAME` to install a separate Wake-on-LAN node:
+
+```yaml
+services:
+  nodel:
+    environment:
+      NODEL_WOL_NODE_NAME: Gallery PC Wake-on-LAN
+```
+
+Configure its MAC address in the Nodel parameters UI. The broadcast address,
+UDP port (9999 by default), and packet count are also configurable.
+
+The Wake-on-LAN node controls a remote computer reachable from this Nodel host.
+It cannot wake the Balena device running the container after that device has
+powered off. Run Nodel on an always-on controller when the Balena device itself
+is the Wake-on-LAN target.
+
+The supplied recipe's VNC monitoring, outlet control, and remote power-off
+bindings are project-specific and are deliberately not installed by this
+generic node.
+
 Clone consuming projects with their submodules:
 
 ```sh
