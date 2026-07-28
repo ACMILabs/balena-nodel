@@ -9,6 +9,12 @@ if ! getent hosts "$runtime_hostname" >/dev/null 2>&1; then
     printf '\n127.0.1.1\t%s\n' "$runtime_hostname" >> /etc/hosts
 fi
 
+# Older balena-nodel images ran Java as root, so existing persistent volumes can
+# contain root-owned nodes that the unprivileged Nodel process cannot update.
+# Reconcile the volume on every start so restores and copied-in recipes are also
+# usable; chown does not follow symlinks found during recursive traversal.
+chown -R nodel:nodel /var/lib/nodel
+
 # This node belongs to the image and is refreshed on every start. Everything
 # else under /var/lib/nodel remains persistent.
 node_name="${NODEL_NODE_NAME:-${BALENA_DEVICE_NAME_AT_INIT:-$runtime_hostname}}"
