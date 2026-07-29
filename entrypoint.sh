@@ -20,7 +20,7 @@ chown -R nodel:nodel /var/lib/nodel
 node_name="${NODEL_NODE_NAME:-${BALENA_DEVICE_NAME_AT_INIT:-$runtime_hostname}}"
 node_name="${node_name//\//_}"
 node_dir="/var/lib/nodel/nodes/$node_name"
-install -d -o nodel -g nodel "$node_dir/content"
+install -d -o nodel -g nodel "$node_dir" "$node_dir/content"
 install -o nodel -g nodel -m 0644 \
     /opt/nodel/managed-node/script.py "$node_dir/script.py"
 
