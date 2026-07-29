@@ -74,6 +74,49 @@ The supplied recipe's VNC monitoring, outlet control, and remote power-off
 bindings are project-specific and are deliberately not installed by this
 generic node.
 
+## Synchronising Nodel node names
+
+Copy the safe example inventory to the ignored production path:
+
+```sh
+cp inventory/nodel-node-names.example.tsv inventory/nodel-node-names.tsv
+```
+
+Edit `inventory/nodel-node-names.tsv` with the real device inventory. Each row
+contains a balenaCloud fleet slug, physical MAC address, and desired Nodel node
+name, separated by tabs. The production file is ignored because MAC addresses
+and fleet details are site-specific; only the fictional example is committed.
+
+The sync command validates every inventory row against detailed balenaCloud
+device metadata and performs a read-only dry run by default:
+
+```sh
+python3 scripts/sync_node_names.py
+```
+
+Review the complete plan, then apply it:
+
+```sh
+python3 scripts/sync_node_names.py --apply
+```
+
+The default creates a device-wide `NODEL_NODE_NAME` variable. This works before
+the first release containing Nodel is deployed, ensuring that the persistent
+node is created with its final name. Device-variable changes restart the
+device's services, so apply them during a suitable maintenance window.
+
+For a device already running a `nodel` service, a service-specific variable can
+be used instead:
+
+```sh
+python3 scripts/sync_node_names.py --service nodel
+python3 scripts/sync_node_names.py --service nodel --apply
+```
+
+Keep using the same scope on later runs. The command only updates values that
+differ, aborts before mutation if any MAC is missing or ambiguous, and can be
+safely rerun after a partial network failure.
+
 Clone consuming projects with their submodules:
 
 ```sh
