@@ -3,8 +3,6 @@
 
 """Wake a remote computer by sending a Wake-on-LAN magic packet."""
 
-from __future__ import print_function
-
 import binascii
 import re
 
