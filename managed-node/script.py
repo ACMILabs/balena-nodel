@@ -71,7 +71,10 @@ def supervisor_request(endpoint):
         endpoint,
         quote(api_key, safe=''),
     )
-    request = Request(url, data=b'{}')
+    request_data = '{}'
+    if sys.version_info[0] >= 3:
+        request_data = request_data.encode('ascii')
+    request = Request(url, data=request_data)
     request.add_header('Content-Type', 'application/json')
     try:
         response = open_url(request, 15)

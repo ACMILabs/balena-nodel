@@ -87,7 +87,8 @@ def normalize_mac_address(mac_address):
 
 def build_magic_packet(mac_address):
     mac_bytes = binascii.unhexlify(normalize_mac_address(mac_address))
-    return b'\xff' * 6 + mac_bytes * 16
+    header = binascii.unhexlify('ff' * 6)
+    return header + mac_bytes * 16
 
 
 def local_action_SendWakeOnLAN(arg=None):
