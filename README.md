@@ -47,7 +47,9 @@ Set `BROWSER_SCREENSHOT_URL` if the browser API is not available at
 
 The power actions require the Supervisor API label. The screenshot action
 requires a compatible Balena browser service with its management port published
-at host port 5011.
+at host port 5011. The managed node also publishes the device's detected MAC
+addresses under **Network Info**, making it easier to configure a Wake-on-LAN
+node hosted on another always-on Nodel device.
 
 ### Optional Wake-on-LAN node
 
