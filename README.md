@@ -7,7 +7,9 @@ actions to reboot or shut down a Balena device and capture its browser display.
 The managed recipe is refreshed from the image at every container start. Other
 nodes, recipes, and configuration under `/var/lib/nodel` remain persistent.
 At startup, ownership of that volume is reconciled to the unprivileged `nodel`
-user so volumes created by older root-running images continue to work.
+user so volumes created by older root-running images continue to work. The
+managed node's name is tracked in the volume; changing `NODEL_NODE_NAME` moves
+that node to its new name instead of leaving the old recipe active.
 
 ## Use from another Balena project
 
