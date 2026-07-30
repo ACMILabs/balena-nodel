@@ -64,6 +64,9 @@ services:
       NODEL_WOL_NODE_NAME: Gallery PC Wake-on-LAN
 ```
 
+Changing this value moves the image-managed Wake-on-LAN node to its new name.
+Clearing it removes that node so its wake action is no longer loaded.
+
 Configure its MAC address in the Nodel parameters UI. The broadcast address,
 UDP port (9999 by default), and packet count are also configurable.
 
@@ -88,6 +91,8 @@ Edit `inventory/nodel-node-names.tsv` with the real device inventory. Each row
 contains a balenaCloud fleet slug, physical MAC address, and desired Nodel node
 name, separated by tabs. The production file is ignored because MAC addresses
 and fleet details are site-specific; only the fictional example is committed.
+Node names cannot be `.` or `..` or contain `/`, because Nodel uses them as
+directory names.
 
 The sync command validates every inventory row against detailed balenaCloud
 device metadata and performs a read-only dry run by default:

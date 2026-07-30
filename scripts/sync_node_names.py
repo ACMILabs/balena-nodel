@@ -92,6 +92,14 @@ def load_inventory(path):
                     '%s:%d contains an empty fleet or node name'
                     % (path, line_number)
                 )
+            if (
+                any(character in name for character in ('/', '\r', '\n'))
+                or name in ('.', '..')
+            ):
+                raise SyncError(
+                    '%s:%d contains a node name that Nodel cannot use as-is'
+                    % (path, line_number)
+                )
             try:
                 mac = normalize_mac(raw_mac)
             except ValueError as error:

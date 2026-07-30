@@ -7,6 +7,7 @@ LABEL org.opencontainers.image.source="https://github.com/ACMILabs/balena-nodel"
 
 COPY entrypoint.sh /usr/local/bin/nodel-entrypoint
 COPY managed-node/script.py /opt/nodel/managed-node/script.py
+COPY migration/master-managed-node.py /opt/nodel/migration/master-managed-node.py
 COPY wake-on-lan-node/script.py /opt/nodel/wake-on-lan-node/script.py
 
 RUN set -eux; \

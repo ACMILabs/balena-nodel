@@ -53,6 +53,19 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(sync.SyncError, 'duplicates MAC'):
             sync.load_inventory(path)
 
+    def test_inventory_rejects_names_rewritten_by_the_entrypoint(self):
+        for node_name in ('Controls/Display', '.', '..'):
+            with self.subTest(node_name=node_name):
+                path = self.write_inventory(
+                    'org/one\tE8:CF:83:46:41:A7\t%s\n' % node_name
+                )
+
+                with self.assertRaisesRegex(
+                    sync.SyncError,
+                    'Nodel cannot use as-is',
+                ):
+                    sync.load_inventory(path)
+
     def test_extract_macs_handles_balena_multi_interface_values(self):
         self.assertEqual(
             sync.extract_macs(

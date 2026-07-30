@@ -58,29 +58,42 @@ install_file_safely() {
     mv -f "$temporary_file" "$destination"
 }
 
-discover_legacy_managed_node() {
+discover_legacy_node() {
     local nodes_dir="$1"
     local node_name="$2"
-    local managed_recipe="$3"
+    shift 2
     local candidate
     local candidate_name
     local candidate_recipe
+    local known_recipe
+    local recipe_matches
     local previous_node_name=""
 
-    # Releases before the state file was introduced can still have one managed
-    # recipe in a persistent volume. Its script was refreshed from the image at
-    # every start, so an exact match safely identifies it for one-time migration.
-    for candidate in "$nodes_dir"/*; do
+    # Releases before the state files were introduced can still have an
+    # image-managed recipe in a persistent volume. Compare it with every recipe
+    # previously shipped by the image to identify it for one-time migration.
+    for candidate in \
+        "$nodes_dir"/* \
+        "$nodes_dir"/.[!.]* \
+        "$nodes_dir"/..?*; do
         [[ -d "$candidate" && ! -L "$candidate" ]] || continue
         candidate_name="${candidate##*/}"
         [[ "$candidate_name" != "$node_name" ]] || continue
         is_safe_node_name "$candidate_name" || continue
         candidate_recipe="$candidate/script.py"
         [[ -f "$candidate_recipe" && ! -L "$candidate_recipe" ]] || continue
-        cmp -s "$managed_recipe" "$candidate_recipe" || continue
+
+        recipe_matches=false
+        for known_recipe in "$@"; do
+            if cmp -s "$known_recipe" "$candidate_recipe"; then
+                recipe_matches=true
+                break
+            fi
+        done
+        [[ "$recipe_matches" == true ]] || continue
 
         if [[ -n "$previous_node_name" ]]; then
-            echo "Multiple legacy managed nodes found; refusing migration" >&2
+            echo "Multiple legacy image-managed nodes found; refusing migration" >&2
             return 1
         fi
         previous_node_name="$candidate_name"
@@ -104,8 +117,7 @@ migrate_managed_node() {
 
     IFS= read -r previous_node_name < "$state_file" || true
     if ! is_safe_node_name "$previous_node_name"; then
-        echo "Ignoring invalid managed-node state in $state_file" >&2
-        return
+        die "Invalid managed-node state in $state_file"
     fi
     if [[ "$previous_node_name" == "$node_name" ]]; then
         return
@@ -127,17 +139,65 @@ migrate_managed_node() {
     fi
 }
 
-write_managed_node_state() {
+reconcile_wol_node() {
+    local nodes_dir="$1"
+    local state_file="$2"
+    local node_name="$3"
+    local previous_node_name
+    local previous_node_dir
+    local node_dir
+
+    ensure_safe_file_destination "$state_file"
+    if [[ ! -e "$state_file" ]]; then
+        return
+    fi
+
+    IFS= read -r previous_node_name < "$state_file" || true
+    if ! is_safe_node_name "$previous_node_name"; then
+        die "Invalid Wake-on-LAN node state in $state_file"
+    fi
+    if [[ "$previous_node_name" == "$node_name" ]]; then
+        return
+    fi
+
+    previous_node_dir="$nodes_dir/$previous_node_name"
+    ensure_real_directory "$previous_node_dir"
+    if [[ ! -d "$previous_node_dir" ]]; then
+        return
+    fi
+
+    if [[ -z "$node_name" ]]; then
+        rm -rf "$previous_node_dir"
+        return
+    fi
+
+    node_dir="$nodes_dir/$node_name"
+    ensure_real_directory "$node_dir"
+    if [[ -e "$node_dir" ]]; then
+        rm -rf "$previous_node_dir"
+    else
+        mv "$previous_node_dir" "$node_dir"
+    fi
+}
+
+write_node_state() {
     local state_file="$1"
     local node_name="$2"
     local temporary_file
 
     ensure_safe_file_destination "$state_file"
-    temporary_file="$(mktemp "${state_file%/*}/.managed-node-name.XXXXXX")"
+    temporary_file="$(mktemp "${state_file%/*}/.node-name.XXXXXX")"
     printf '%s\n' "$node_name" > "$temporary_file"
     chown root:root "$temporary_file"
     chmod 0600 "$temporary_file"
     mv -f "$temporary_file" "$state_file"
+}
+
+remove_node_state() {
+    local state_file="$1"
+
+    ensure_safe_file_destination "$state_file"
+    rm -f "$state_file"
 }
 
 main() {
@@ -145,6 +205,7 @@ main() {
     local data_dir="/var/lib/nodel"
     local nodes_dir="$data_dir/nodes"
     local managed_node_state="$data_dir/.managed-node-name"
+    local wol_node_state="$data_dir/.wol-node-name"
     local node_name
     local node_dir
     local previous_node_name
@@ -182,13 +243,28 @@ main() {
         fi
     fi
 
+    # Retire or move the previously installed Wake-on-LAN node before the
+    # managed node is migrated. This also frees a WOL name that is becoming the
+    # new managed-node name.
+    if [[ ! -e "$wol_node_state" && ! -L "$wol_node_state" ]]; then
+        previous_node_name="$(discover_legacy_node \
+            "$nodes_dir" "$wol_node_name" \
+            /opt/nodel/wake-on-lan-node/script.py)"
+        if [[ -n "$previous_node_name" ]]; then
+            write_node_state "$wol_node_state" "$previous_node_name"
+        fi
+    fi
+    reconcile_wol_node "$nodes_dir" "$wol_node_state" "$wol_node_name"
+
     node_dir="$nodes_dir/$node_name"
     ensure_real_directory "$node_dir"
     if [[ ! -e "$managed_node_state" && ! -L "$managed_node_state" ]]; then
-        previous_node_name="$(discover_legacy_managed_node \
-            "$nodes_dir" "$node_name" /opt/nodel/managed-node/script.py)"
+        previous_node_name="$(discover_legacy_node \
+            "$nodes_dir" "$node_name" \
+            /opt/nodel/managed-node/script.py \
+            /opt/nodel/migration/master-managed-node.py)"
         if [[ -n "$previous_node_name" ]]; then
-            write_managed_node_state \
+            write_node_state \
                 "$managed_node_state" "$previous_node_name"
         fi
     fi
@@ -198,7 +274,7 @@ main() {
     install -d -o nodel -g nodel "$node_dir" "$node_dir/content"
     install_file_safely \
         /opt/nodel/managed-node/script.py "$node_dir/script.py"
-    write_managed_node_state "$managed_node_state" "$node_name"
+    write_node_state "$managed_node_state" "$node_name"
 
     export NODEL_MANAGED_NODE_NAME="$node_name"
 
@@ -210,6 +286,9 @@ main() {
         install -d -o nodel -g nodel "$wol_node_dir"
         install_file_safely \
             /opt/nodel/wake-on-lan-node/script.py "$wol_node_dir/script.py"
+        write_node_state "$wol_node_state" "$wol_node_name"
+    else
+        remove_node_state "$wol_node_state"
     fi
 
     nodel_args=("$@")

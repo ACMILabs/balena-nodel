@@ -1,3 +1,4 @@
+import hashlib
 import os
 import subprocess
 import tempfile
@@ -67,26 +68,45 @@ class EntrypointTests(unittest.TestCase):
             self.assertFalse(os.path.exists(old_node))
             self.assertTrue(os.path.isdir(os.path.join(new_node, 'content')))
 
-    def test_legacy_managed_node_is_discovered_from_its_recipe(self):
+    def test_legacy_node_is_discovered_from_any_known_recipe(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             nodes_directory = os.path.join(temporary_directory, 'nodes')
             old_node = os.path.join(nodes_directory, 'Old name')
             managed_recipe = os.path.join(temporary_directory, 'managed.py')
+            legacy_recipe = os.path.join(temporary_directory, 'legacy.py')
             os.makedirs(old_node)
             with open(managed_recipe, 'w') as recipe:
-                recipe.write('# image-managed recipe\n')
+                recipe.write('# current image-managed recipe\n')
+            with open(legacy_recipe, 'w') as recipe:
+                recipe.write('# old image-managed recipe\n')
             with open(os.path.join(old_node, 'script.py'), 'w') as recipe:
-                recipe.write('# image-managed recipe\n')
+                recipe.write('# old image-managed recipe\n')
 
             result = self.run_shell(
                 'source "$1"\n'
-                'discover_legacy_managed_node "$2" "New name" "$3"',
+                'discover_legacy_node "$2" "New name" "$3" "$4"',
                 nodes_directory,
                 managed_recipe,
+                legacy_recipe,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, 'Old name')
+
+    def test_master_migration_recipe_is_the_pre_upgrade_recipe(self):
+        recipe_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'migration',
+            'master-managed-node.py',
+        )
+        with open(recipe_path, 'rb') as recipe:
+            digest = hashlib.sha256(recipe.read()).hexdigest()
+
+        self.assertEqual(
+            digest,
+            'bc912a06b6351140b64b0e3b0a8e8a60'
+            'ee42a93a1a3ee1d719e3635480e90940',
+        )
 
     def test_previous_managed_node_is_removed_when_new_name_exists(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -108,6 +128,44 @@ class EntrypointTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(os.path.exists(old_node))
             self.assertTrue(os.path.isdir(new_node))
+
+    def test_wol_node_is_moved_when_name_changes(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            nodes_directory = os.path.join(temporary_directory, 'nodes')
+            old_node = os.path.join(nodes_directory, 'Old WOL')
+            new_node = os.path.join(nodes_directory, 'New WOL')
+            state_file = os.path.join(temporary_directory, '.wol-node-name')
+            os.makedirs(old_node)
+            with open(state_file, 'w') as state:
+                state.write('Old WOL\n')
+
+            result = self.run_shell(
+                'source "$1"\nreconcile_wol_node "$2" "$3" "New WOL"',
+                nodes_directory,
+                state_file,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(os.path.exists(old_node))
+            self.assertTrue(os.path.isdir(new_node))
+
+    def test_wol_node_is_removed_when_disabled(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            nodes_directory = os.path.join(temporary_directory, 'nodes')
+            old_node = os.path.join(nodes_directory, 'Old WOL')
+            state_file = os.path.join(temporary_directory, '.wol-node-name')
+            os.makedirs(old_node)
+            with open(state_file, 'w') as state:
+                state.write('Old WOL\n')
+
+            result = self.run_shell(
+                'source "$1"\nreconcile_wol_node "$2" "$3" ""',
+                nodes_directory,
+                state_file,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(os.path.exists(old_node))
 
     def test_root_owned_installs_are_preceded_by_symlink_checks(self):
         content_check = 'ensure_real_directory "$node_dir/content"'
