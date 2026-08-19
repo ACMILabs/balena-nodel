@@ -102,82 +102,119 @@ discover_legacy_node() {
     printf '%s' "$previous_node_name"
 }
 
-migrate_managed_node() {
-    local nodes_dir="$1"
-    local state_file="$2"
-    local node_name="$3"
-    local previous_node_name
-    local previous_node_dir
-    local node_dir="$nodes_dir/$node_name"
+read_node_state() {
+    local state_file="$1"
+    local state_description="$2"
+    local node_name
 
     ensure_safe_file_destination "$state_file"
     if [[ ! -e "$state_file" ]]; then
         return
     fi
 
-    IFS= read -r previous_node_name < "$state_file" || true
-    if ! is_safe_node_name "$previous_node_name"; then
-        die "Invalid managed-node state in $state_file"
+    IFS= read -r node_name < "$state_file" || true
+    if ! is_safe_node_name "$node_name"; then
+        echo "Invalid $state_description state in $state_file" >&2
+        return 1
     fi
-    if [[ "$previous_node_name" == "$node_name" ]]; then
-        return
-    fi
-
-    previous_node_dir="$nodes_dir/$previous_node_name"
-    ensure_real_directory "$previous_node_dir"
-    ensure_real_directory "$node_dir"
-    if [[ ! -d "$previous_node_dir" ]]; then
-        return
-    fi
-
-    if [[ -e "$node_dir" ]]; then
-        # The destination may have been created by an earlier start using the
-        # new name. Remove only the previously tracked image-managed node.
-        rm -rf "$previous_node_dir"
-    else
-        mv "$previous_node_dir" "$node_dir"
-    fi
+    printf '%s' "$node_name"
 }
 
-reconcile_wol_node() {
+stage_tracked_node() {
     local nodes_dir="$1"
-    local state_file="$2"
-    local node_name="$3"
-    local previous_node_name
+    local migration_dir="$2"
+    local role="$3"
+    local previous_node_name="$4"
+    local node_name="$5"
     local previous_node_dir
-    local node_dir
+    local staged_node_dir="$migration_dir/$role"
 
-    ensure_safe_file_destination "$state_file"
-    if [[ ! -e "$state_file" ]]; then
-        return
-    fi
-
-    IFS= read -r previous_node_name < "$state_file" || true
-    if ! is_safe_node_name "$previous_node_name"; then
-        die "Invalid Wake-on-LAN node state in $state_file"
-    fi
-    if [[ "$previous_node_name" == "$node_name" ]]; then
+    ensure_real_directory "$staged_node_dir"
+    if [[ -d "$staged_node_dir" ||
+        -z "$previous_node_name" ||
+        "$previous_node_name" == "$node_name" ]]; then
         return
     fi
 
     previous_node_dir="$nodes_dir/$previous_node_name"
     ensure_real_directory "$previous_node_dir"
     if [[ ! -d "$previous_node_dir" ]]; then
+        return
+    fi
+
+    mv "$previous_node_dir" "$staged_node_dir"
+}
+
+place_staged_node() {
+    local nodes_dir="$1"
+    local migration_dir="$2"
+    local role="$3"
+    local node_name="$4"
+    local staged_node_dir="$migration_dir/$role"
+    local node_dir
+
+    ensure_real_directory "$staged_node_dir"
+    if [[ ! -d "$staged_node_dir" ]]; then
         return
     fi
 
     if [[ -z "$node_name" ]]; then
-        rm -rf "$previous_node_dir"
+        rm -rf "$staged_node_dir"
         return
     fi
 
     node_dir="$nodes_dir/$node_name"
     ensure_real_directory "$node_dir"
     if [[ -e "$node_dir" ]]; then
-        rm -rf "$previous_node_dir"
-    else
-        mv "$previous_node_dir" "$node_dir"
+        if [[ "$role" == "managed" ]]; then
+            # A managed destination can exist after an interrupted prior start;
+            # its image recipe will be refreshed below.
+            rm -rf "$staged_node_dir"
+            return
+        fi
+        echo "Cannot migrate Wake-on-LAN node: destination exists: $node_dir" >&2
+        return 1
     fi
+
+    mv "$staged_node_dir" "$node_dir"
+}
+
+reconcile_tracked_nodes() {
+    local nodes_dir="$1"
+    local migration_dir="$2"
+    local managed_state_file="$3"
+    local managed_node_name="$4"
+    local wol_state_file="$5"
+    local wol_node_name="$6"
+    local previous_managed_node_name
+    local previous_wol_node_name
+
+    previous_managed_node_name="$(read_node_state \
+        "$managed_state_file" "managed-node")"
+    previous_wol_node_name="$(read_node_state \
+        "$wol_state_file" "Wake-on-LAN node")"
+    if [[ -n "$previous_managed_node_name" &&
+        "$previous_managed_node_name" == "$previous_wol_node_name" ]]; then
+        echo "Managed and Wake-on-LAN state refer to the same node" >&2
+        return 1
+    fi
+
+    ensure_real_directory "$migration_dir"
+    install -d -m 0700 "$migration_dir"
+    stage_tracked_node \
+        "$nodes_dir" "$migration_dir" managed \
+        "$previous_managed_node_name" "$managed_node_name"
+    stage_tracked_node \
+        "$nodes_dir" "$migration_dir" wol \
+        "$previous_wol_node_name" "$wol_node_name"
+
+    # Both sources are now outside Nodel's active nodes directory, so crossed
+    # names and swaps cannot make one role delete the other role's state.
+    place_staged_node \
+        "$nodes_dir" "$migration_dir" managed "$managed_node_name"
+    place_staged_node \
+        "$nodes_dir" "$migration_dir" wol "$wol_node_name"
+    rmdir "$migration_dir" 2>/dev/null || true
 }
 
 write_node_state() {
@@ -204,6 +241,7 @@ main() {
     local runtime_hostname
     local data_dir="/var/lib/nodel"
     local nodes_dir="$data_dir/nodes"
+    local migration_dir="$data_dir/.node-migration"
     local managed_node_state="$data_dir/.managed-node-name"
     local wol_node_state="$data_dir/.wol-node-name"
     local node_name
@@ -243,9 +281,7 @@ main() {
         fi
     fi
 
-    # Retire or move the previously installed Wake-on-LAN node before the
-    # managed node is migrated. This also frees a WOL name that is becoming the
-    # new managed-node name.
+    # Discover nodes installed before name tracking was introduced.
     if [[ ! -e "$wol_node_state" && ! -L "$wol_node_state" ]]; then
         previous_node_name="$(discover_legacy_node \
             "$nodes_dir" "$wol_node_name" \
@@ -254,7 +290,6 @@ main() {
             write_node_state "$wol_node_state" "$previous_node_name"
         fi
     fi
-    reconcile_wol_node "$nodes_dir" "$wol_node_state" "$wol_node_name"
 
     node_dir="$nodes_dir/$node_name"
     ensure_real_directory "$node_dir"
@@ -268,7 +303,11 @@ main() {
                 "$managed_node_state" "$previous_node_name"
         fi
     fi
-    migrate_managed_node "$nodes_dir" "$managed_node_state" "$node_name"
+
+    reconcile_tracked_nodes \
+        "$nodes_dir" "$migration_dir" \
+        "$managed_node_state" "$node_name" \
+        "$wol_node_state" "$wol_node_name"
     ensure_real_directory "$node_dir"
     ensure_real_directory "$node_dir/content"
     install -d -o nodel -g nodel "$node_dir" "$node_dir/content"

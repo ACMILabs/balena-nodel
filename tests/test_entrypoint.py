@@ -59,9 +59,12 @@ class EntrypointTests(unittest.TestCase):
                 state.write('Old name\n')
 
             result = self.run_shell(
-                'source "$1"\nmigrate_managed_node "$2" "$3" "New name"',
+                'source "$1"\n'
+                'reconcile_tracked_nodes "$2" "$3" "$4" "New name" "$5" ""',
                 nodes_directory,
+                os.path.join(temporary_directory, '.migration'),
                 state_file,
+                os.path.join(temporary_directory, '.wol-node-name'),
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -120,9 +123,12 @@ class EntrypointTests(unittest.TestCase):
                 state.write('Old name\n')
 
             result = self.run_shell(
-                'source "$1"\nmigrate_managed_node "$2" "$3" "New name"',
+                'source "$1"\n'
+                'reconcile_tracked_nodes "$2" "$3" "$4" "New name" "$5" ""',
                 nodes_directory,
+                os.path.join(temporary_directory, '.migration'),
                 state_file,
+                os.path.join(temporary_directory, '.wol-node-name'),
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -140,8 +146,12 @@ class EntrypointTests(unittest.TestCase):
                 state.write('Old WOL\n')
 
             result = self.run_shell(
-                'source "$1"\nreconcile_wol_node "$2" "$3" "New WOL"',
+                'source "$1"\n'
+                'reconcile_tracked_nodes "$2" "$3" "$4" "Managed" '
+                '"$5" "New WOL"',
                 nodes_directory,
+                os.path.join(temporary_directory, '.migration'),
+                os.path.join(temporary_directory, '.managed-node-name'),
                 state_file,
             )
 
@@ -159,13 +169,64 @@ class EntrypointTests(unittest.TestCase):
                 state.write('Old WOL\n')
 
             result = self.run_shell(
-                'source "$1"\nreconcile_wol_node "$2" "$3" ""',
+                'source "$1"\n'
+                'reconcile_tracked_nodes "$2" "$3" "$4" "Managed" "$5" ""',
                 nodes_directory,
+                os.path.join(temporary_directory, '.migration'),
+                os.path.join(temporary_directory, '.managed-node-name'),
                 state_file,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(os.path.exists(old_node))
+
+    def test_crossed_names_preserve_both_node_directories(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            nodes_directory = os.path.join(temporary_directory, 'nodes')
+            migration_directory = os.path.join(
+                temporary_directory,
+                '.migration',
+            )
+            managed_state = os.path.join(
+                temporary_directory,
+                '.managed-node-name',
+            )
+            wol_state = os.path.join(
+                temporary_directory,
+                '.wol-node-name',
+            )
+            old_managed = os.path.join(nodes_directory, 'Managed A')
+            old_wol = os.path.join(nodes_directory, 'WOL B')
+            new_managed = os.path.join(nodes_directory, 'Managed C')
+            new_wol = os.path.join(nodes_directory, 'Managed A')
+            os.makedirs(old_managed)
+            os.makedirs(old_wol)
+            with open(os.path.join(old_managed, 'managed-marker'), 'w'):
+                pass
+            with open(os.path.join(old_wol, 'wol-marker'), 'w'):
+                pass
+            with open(managed_state, 'w') as state:
+                state.write('Managed A\n')
+            with open(wol_state, 'w') as state:
+                state.write('WOL B\n')
+
+            result = self.run_shell(
+                'source "$1"\n'
+                'reconcile_tracked_nodes "$2" "$3" "$4" "Managed C" '
+                '"$5" "Managed A"',
+                nodes_directory,
+                migration_directory,
+                managed_state,
+                wol_state,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(
+                os.path.isfile(os.path.join(new_managed, 'managed-marker'))
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(new_wol, 'wol-marker'))
+            )
 
     def test_root_owned_installs_are_preceded_by_symlink_checks(self):
         content_check = 'ensure_real_directory "$node_dir/content"'
