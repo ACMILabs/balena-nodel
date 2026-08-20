@@ -103,3 +103,7 @@ dev.env
 
 # mypy
 .mypy_cache/
+
+# Site-specific device inventory
+inventory/nodel-node-names*.tsv
+!inventory/nodel-node-names.example.tsv

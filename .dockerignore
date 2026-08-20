@@ -1,0 +1,11 @@
+# Keep site-specific inventory and all other development files out of local and
+# remote Docker build contexts. Only files copied by the Dockerfile are allowed.
+**
+!Dockerfile
+!entrypoint.sh
+!managed-node/
+!managed-node/script.py
+!migration/
+!migration/master-managed-node.py
+!wake-on-lan-node/
+!wake-on-lan-node/script.py

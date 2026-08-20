@@ -1,0 +1,4 @@
+# fleet	MAC address	Nodel node name
+example-org/example-map-viewer	00:11:22:33:44:55	Example Interactive Map
+example-org/example-model-viewer	00:11:22:33:44:66	Example 3D Model
+example-org/example-book-viewer	00:11:22:33:44:77	Example Digital Book
